@@ -1,0 +1,249 @@
+// ================= CONFIGURACIÓN =================
+const CONFIG = {
+    centroValencia: [39.46975, -0.37739],
+    zoomInicial: 14,
+    zoomMaximo: 19,
+    
+    // Colores para los marcadores
+    colores: {
+        oficial: '#e53e3e',     // Rojo
+        personal: '#38a169',    // Verde
+        usuario: '#3182ce'      // Azul
+    },
+    
+    // URL de datos oficiales (Valencia Open Data)
+    urlOficial: 'https://valencia.opendatasoft.com/api/records/1.0/search/' +
+               '?dataset=zones-carrega-descarrega-zonas-carga-descarga' +
+               '&rows=1000&lang=es',
+    
+    // URL de datos personales (tus zonas)
+    urlPersonal: 'https://raw.githubusercontent.com/TU_USUARIO/mapa-valencia-zonas/main/datos.json'
+};
+
+// ================= VARIABLES GLOBALES =================
+let mapa;
+let capas = {
+    oficial: L.layerGroup(),
+    personal: L.layerGroup(),
+    usuario: L.layerGroup()
+};
+let contadores = {
+    oficial: 0,
+    personal: 0
+};
+
+// ================= INICIALIZACIÓN =================
+document.addEventListener('DOMContentLoaded', function() {
+    // 1. Configurar año actual
+    document.getElementById('anio-actual').textContent = new Date().getFullYear();
+    
+    // 2. Inicializar mapa
+    inicializarMapa();
+    
+    // 3. Cargar datos oficiales
+    cargarDatosOficiales();
+    
+    // 4. Cargar datos personales
+    cargarDatosPersonales();
+    
+    // 5. Configurar eventos
+    configurarEventos();
+});
+
+// ================= FUNCIONES PRINCIPALES =================
+function inicializarMapa() {
+    // Crear mapa
+    mapa = L.map('map').setView(CONFIG.centroValencia, CONFIG.zoomInicial);
+    
+    // Añadir capa base (OpenStreetMap)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> | ' +
+                    'Datos: <a href="https://valencia.opendatasoft.com">Ayuntamiento de Valencia</a>',
+        maxZoom: CONFIG.zoomMaximo
+    }).addTo(mapa);
+    
+    // Añadir capas al mapa
+    for (let capa in capas) {
+        capas[capa].addTo(mapa);
+    }
+}
+
+async function cargarDatosOficiales() {
+    try {
+        const respuesta = await fetch(CONFIG.urlOficial);
+        const datos = await respuesta.json();
+        
+        contadores.oficial = 0;
+        
+        datos.records.forEach(registro => {
+            const zona = registro.fields;
+            
+            if (zona.geo_point_2d && zona.geo_point_2d.length === 2) {
+                // Crear marcador
+                const marcador = L.marker(
+                    [zona.geo_point_2d[0], zona.geo_point_2d[1]],
+                    {
+                        icon: L.icon({
+                            iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+                            iconSize: [25, 41],
+                            iconAnchor: [12, 41]
+                        })
+                    }
+                );
+                
+                // Popup con información
+                const popupContent = `
+                    <div class="popup-oficial">
+                        <h4>${zona.nom_official || 'Zona oficial'}</h4>
+                        <p><strong>📍 Dirección:</strong> ${zona.direccio || 'No especificada'}</p>
+                        <p><strong>📋 Tipo:</strong> ${zona.tipus || 'Carga/Descarga'}</p>
+                        <p><strong>🕐 Horario:</strong> ${zona.horari || 'Consultar señalización'}</p>
+                        <p class="fuente"><small>Fuente: Ayuntamiento de Valencia</small></p>
+                    </div>
+                `;
+                
+                marcador.bindPopup(popupContent);
+                marcador.addTo(capas.oficial);
+                
+                contadores.oficial++;
+            }
+        });
+        
+        actualizarContadores();
+        console.log(`✅ ${contadores.oficial} zonas oficiales cargadas`);
+        
+    } catch (error) {
+        console.error('❌ Error cargando datos oficiales:', error);
+        document.getElementById('contador-oficiales').textContent = 'Error';
+    }
+}
+
+async function cargarDatosPersonales() {
+    try {
+        // Reemplazar "TU_USUARIO" por tu nombre de usuario de GitHub
+        const url = CONFIG.urlPersonal.replace('TU_USUARIO', 'tu_usuario_github');
+        const respuesta = await fetch(url);
+        const zonasPersonales = await respuesta.json();
+        
+        contadores.personal = 0;
+        
+        zonasPersonales.forEach(zona => {
+            const marcador = L.marker(
+                [zona.lat, zona.lng],
+                {
+                    icon: L.divIcon({
+                        html: '<div style="background:#38a169;color:white;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:16px;">📍</div>',
+                        iconSize: [30, 30],
+                        className: 'marcador-personal'
+                    })
+                }
+            );
+            
+            const popupContent = `
+                <div class="popup-personal">
+                    <h4>${zona.nombre}</h4>
+                    <p><strong>📋 Tipo:</strong> ${zona.tipo || 'Personal'}</p>
+                    <p><strong>📝 Notas:</strong> ${zona.descripcion || ''}</p>
+                    <p><strong>🕐 Horario útil:</strong> ${zona.horario || 'Variable'}</p>
+                    <p><small><em>Añadido por usuarios</em></small></p>
+                </div>
+            `;
+            
+            marcador.bindPopup(popupContent);
+            marcador.addTo(capas.personal);
+            
+            contadores.personal++;
+        });
+        
+        actualizarContadores();
+        console.log(`✅ ${contadores.personal} zonas personales cargadas`);
+        
+    } catch (error) {
+        console.warn('⚠️ No hay zonas personales o error cargándolas');
+        // No es crítico, seguimos sin zonas personales
+    }
+}
+
+// ================= FUNCIONES AUXILIARES =================
+function actualizarContadores() {
+    document.getElementById('contador-oficiales').textContent = contadores.oficial;
+    document.getElementById('contador-personales').textContent = contadores.personal;
+    document.getElementById('contador-total').textContent = contadores.oficial + contadores.personal;
+    document.getElementById('fecha-actual').textContent = new Date().toLocaleDateString('es-ES');
+}
+
+function centrarValencia() {
+    mapa.setView(CONFIG.centroValencia, CONFIG.zoomInicial);
+}
+
+function miUbicacion() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            posicion => {
+                const lat = posicion.coords.latitude;
+                const lng = posicion.coords.longitude;
+                
+                // Centrar mapa
+                mapa.setView([lat, lng], 16);
+                
+                // Limpiar marcadores anteriores de usuario
+                capas.usuario.clearLayers();
+                
+                // Añadir nuevo marcador
+                const marcadorUsuario = L.marker([lat, lng], {
+                    icon: L.divIcon({
+                        html: '<div style="background:#3182ce;color:white;border-radius:50%;width:35px;height:35px;display:flex;align-items:center;justify-content:center;font-size:18px;border:3px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);">📍</div>',
+                        iconSize: [35, 35],
+                        className: 'marcador-usuario'
+                    })
+                })
+                .addTo(capas.usuario)
+                .bindPopup('<strong>¡Estás aquí!</strong>')
+                .openPopup();
+                
+            },
+            error => {
+                alert('No se pudo obtener tu ubicación. Asegúrate de permitir el acceso.');
+            }
+        );
+    } else {
+        alert('Tu navegador no soporta geolocalización.');
+    }
+}
+
+function filtrarZonas(tipo) {
+    switch(tipo) {
+        case 'oficial':
+            mapa.removeLayer(capas.personal);
+            mapa.addLayer(capas.oficial);
+            break;
+        case 'personal':
+            mapa.removeLayer(capas.oficial);
+            mapa.addLayer(capas.personal);
+            break;
+        case 'todos':
+            mapa.addLayer(capas.oficial);
+            mapa.addLayer(capas.personal);
+            break;
+    }
+}
+
+function configurarEventos() {
+    // Ejemplo: Añadir zona con doble clic
+    mapa.on('dblclick', function(e) {
+        if (confirm('¿Añadir una zona personal aquí?')) {
+            const nombre = prompt('Nombre de la zona:');
+            if (nombre) {
+                // Aquí podrías guardar en un array local
+                console.log('Zona añadida:', {
+                    nombre: nombre,
+                    lat: e.latlng.lat,
+                    lng: e.latlng.lng,
+                    fecha: new Date().toISOString()
+                });
+                
+                alert('Nota: Para guardar permanentemente, actualiza el archivo datos.json en GitHub');
+            }
+        }
+    });
+}
