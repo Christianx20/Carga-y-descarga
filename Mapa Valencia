@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🗺️ Mapa Zonas Carga/Descarga - Valencia</title>
+    
+    <!-- Leaflet (gratis) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Tus estilos -->
+    <link rel="stylesheet" href="assets/style.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="assets/favicon.png" type="image/png">
+</head>
+<body>
+    <!-- Cabecera -->
+    <header>
+        <h1>🗺️ Mapa Interactivo - Zonas de Carga y Descarga</h1>
+        <p class="subtitle">Valencia | Datos oficiales del Ayuntamiento</p>
+    </header>
+    
+    <!-- Contenedor principal -->
+    <main>
+        <!-- Panel de control -->
+        <aside class="panel-control">
+            <div class="card">
+                <h3>📍 Zonas Cargadas</h3>
+                <div class="stats">
+                    <div class="stat">
+                        <span class="number" id="contador-oficiales">0</span>
+                        <span class="label">Oficiales</span>
+                    </div>
+                    <div class="stat">
+                        <span class="number" id="contador-personales">0</span>
+                        <span class="label">Personales</span>
+                    </div>
+                    <div class="stat">
+                        <span class="number" id="contador-total">0</span>
+                        <span class="label">Total</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>🎯 Acciones Rápidas</h3>
+                <button onclick="centrarValencia()" class="btn">
+                    🏙️ Centrar en Valencia
+                </button>
+                <button onclick="miUbicacion()" class="btn">
+                    📍 Mi Ubicación
+                </button>
+                <button onclick="filtrarZonas('oficial')" class="btn">
+                    🏛️ Solo Oficiales
+                </button>
+                <button onclick="filtrarZonas('todos')" class="btn">
+                    🔄 Mostrar Todos
+                </button>
+            </div>
+            
+            <div class="card">
+                <h3>📊 Información</h3>
+                <p><strong>Fuente oficial:</strong> Ayuntamiento de Valencia</p>
+                <p><strong>Actualizado:</strong> <span id="fecha-actual">hoy</span></p>
+                <p><strong>Zonas personales:</strong> Guardadas localmente</p>
+                <p class="small">Esta web no usa cookies ni tracking</p>
+            </div>
+        </aside>
+        
+        <!-- Mapa (ocupa la mayor parte) -->
+        <div class="contenedor-mapa">
+            <div id="map"></div>
+            
+            <!-- Leyenda flotante -->
+            <div class="leyenda">
+                <h4>📋 Leyenda</h4>
+                <div class="item-leyenda">
+                    <span class="color-marker oficial"></span>
+                    <span>Zona oficial</span>
+                </div>
+                <div class="item-leyenda">
+                    <span class="color-marker personal"></span>
+                    <span>Zona personal</span>
+                </div>
+                <div class="item-leyenda">
+                    <span class="color-marker usuario"></span>
+                    <span>Tu ubicación</span>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Pie de página -->
+    <footer>
+        <div class="footer-content">
+            <p>
+                <strong>Datos oficiales:</strong> 
+                <a href="https://valencia.opendatasoft.com" target="_blank">
+                    Valencia Open Data
+                </a>
+            </p>
+            <p>
+                <strong>Mapas:</strong> 
+                <a href="https://leafletjs.com" target="_blank">Leaflet</a> + 
+                <a href="https://openstreetmap.org" target="_blank">OpenStreetMap</a>
+            </p>
+            <p class="copyright">
+                © <span id="anio-actual">2024</span> - Mapa colaborativo Valencia
+            </p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="assets/mapa.js"></script>
+</body>
+</html>
